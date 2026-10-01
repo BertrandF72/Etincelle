@@ -440,8 +440,10 @@ var SECTOR_QUESTION = {
 
   /* ============ RENDER ROUTER ============ */
   var root = document.getElementById('app');
+  var appEntryGatePending = true;
   function render(){
     stopActiveRec();
+    if(appEntryGatePending){ appEntryGatePending=false; renderLevelSelect(); return; }
     var s = current();
     if(!s){ if(!store.userLevel){ renderLevelSelect(); } else { renderHome(); } return; }
     var body='';
@@ -1096,13 +1098,21 @@ var SECTOR_QUESTION = {
       html += '<div class="synth-col" style="margin-top:18px;"><h3>Autres idées non développées</h3>'
         + discarded.map(function(i){ return '<div class="synth-bullet">'+esc(i.text)+'</div>'; }).join('') + '</div>';
     }
+    var aiAvailable = !!(window.claude && window.claude.use);
+    var aiBoxHtml;
+    if(aiAvailable){
+      aiBoxHtml = '<div class="ai-box"><div class="lbl">Aller plus loin avec l\'IA</div>'
+        + '<button class="btn btn-spark" id="ai-go" '+(kept.length?'':'disabled')+'>Faire émerger des pistes de concept</button>'
+        + '<div id="ai-output" class="ai-out"></div></div>';
+    } else {
+      aiBoxHtml = '<div class="ai-box"><div class="lbl">Aller plus loin avec l\'IA</div>'
+        + '<div class="ai-out" style="opacity:.85;">Cette fonction n\'est disponible que dans la version Étincelle hébergée sur Claude — pas dans la version installée sur ton téléphone ou déployée en ligne. Tu peux copier tes idées (bouton Partager) et les explorer avec une IA ailleurs.</div></div>';
+    }
     return '<div class="stage-label">Phase 3 · Synthèse</div>'
       + '<h1 class="title">Voici les meilleures idées !</h1>'
       + '<p class="lede">Voici les idées gardées. Tu peux ensuite demander à l\'IA de les prolonger.</p>'
       + '<div class="card">'+html+'</div>'
-      + '<div class="ai-box"><div class="lbl">Aller plus loin avec l\'IA</div>'
-      + '<button class="btn btn-spark" id="ai-go" '+(kept.length?'':'disabled')+'>Faire émerger des pistes de concept</button>'
-      + '<div id="ai-output" class="ai-out"></div></div>'
+      + aiBoxHtml
       + '<div class="bottombar">'+backButtonHTML()+'<span class="spacer"></span><button class="btn btn-ghost" id="share-btn"><span class="stage-icon" style="vertical-align:-3px;margin-right:2px;">'+iconSVG('share',18)+'</span>Partager</button><button class="btn btn-ghost" id="dl-btn">Télécharger</button><button class="btn btn-ghost" id="new-from-synth">Nouvelle séance</button></div>';
   }
   function getAiConceptsText(){
