@@ -310,10 +310,10 @@ var SECTOR_QUESTION = {
 };
 
 
-  var AUTO_FILL_HINTS = ["un souvenir marquant","une habitude quotidienne","un imprévu","une rencontre furtive",
-    "un rituel discret","une transition de vie","un instant de calme","une surprise","un geste automatique",
-    "une émotion forte","un lieu de passage","une saison particulière","un bruit familier","une texture inattendue",
-    "un objet du quotidien","une lumière particulière","un silence","une odeur familière","un instant partagé","une absence"];
+  var AUTO_FILL_HINTS = ["souvenir","habitude","imprévu","rencontre",
+    "rituel","transition","calme","surprise","geste",
+    "émotion","passage","saison","bruit","texture",
+    "objet","lumière","silence","odeur","partage","absence"];
   var ENCOURAGE_FILL = [
     "Pas besoin du mot parfait — le premier qui passe suffit.",
     "Plus c'est loin du sujet, mieux c'est : laisse ton esprit vagabonder.",
@@ -361,7 +361,7 @@ var SECTOR_QUESTION = {
     return {
       id:uid(), createdAt:Date.now(), updatedAt:Date.now(), stage:"subject",
       subject:"", question:"",
-      ex1WarmupDone:false, ex1WarmupWords:[], ex1WarmupPos:0, ex1WarmupEvocations:[[],[]],
+      ex1WarmupDone:false, ex1WarmupWords:[], ex1WarmupPos:0, ex1WarmupEvocations:[[]],
       ex1Branches:[], ex1FillPos:0, ex1DictateQueue:[], ex1DictatePos:0, ex1TimerSpeed:"normal",
       deck: shuffle(WORD_BANK.slice()), drawnWord:null, lastCardWord:null, cardIdeas:[],
       wheelOrder: shuffle(SECTORS.slice()), wheelRotation:0, wheelDraws:[], wheelDrawnName:null, wheelIdeas:[]
@@ -459,7 +459,7 @@ var SECTOR_QUESTION = {
       case 'ex1-warmup': if(s.ex1WarmupPos>0) s.ex1WarmupPos--; else s.stage='hub'; break;
       case 'ex1-warmup': if(s.ex1WarmupPos>0) s.ex1WarmupPos--; else s.stage='ex1-l1'; break;
       case 'ex1-l1': s.stage='hub'; break;
-      case 'ex1-l2': if(s.ex1FillPos>0) s.ex1FillPos--; else s.stage='ex1-warmup'; break;
+      case 'ex1-l2': if(s.ex1FillPos>0) s.ex1FillPos--; else s.stage=(store.userLevel==='habitue')?'ex1-l1':'ex1-warmup'; break;
       case 'ex1-transition': s.stage='ex1-l2'; s.ex1FillPos=Math.max(0,s.ex1Branches.length-1); break;
       case 'ex1-dictate': if(s.ex1DictatePos>0) s.ex1DictatePos--; else { s.stage='ex1-transition'; } break;
       case 'ex2-cards': s.stage='hub'; break;
@@ -559,9 +559,9 @@ var SECTOR_QUESTION = {
       + '</div>'
       + '<h1 class="title" style="margin-top:22px;">Quel niveau d\'accompagnement ?</h1>'
       + '<div class="hub-grid" style="grid-template-columns:1fr;gap:10px;">'
-      + '<div class="'+cardCls('guide')+'" id="level-guide" role="button" tabindex="0" style="flex-direction:row;justify-content:flex-start;gap:12px;text-align:left;padding:16px;min-height:76px;">'
+      + '<div class="'+cardCls('guide')+'" id="level-guide" role="button" tabindex="0" style="flex-direction:row;justify-content:flex-start;gap:12px;text-align:left;padding:16px;">'
       + '<div class="hub-icon" style="flex:none;">'+iconSVG('compass',30)+'</div><div><h3 style="margin-bottom:2px;">Guidé'+badge('guide')+'</h3><div class="hint" style="margin:0;">Avec des consignes, au fil de l\'eau.</div></div></div>'
-      + '<div class="'+cardCls('habitue')+'" id="level-habitue" role="button" tabindex="0" style="flex-direction:row;justify-content:flex-start;gap:12px;text-align:left;padding:16px;min-height:76px;">'
+      + '<div class="'+cardCls('habitue')+'" id="level-habitue" role="button" tabindex="0" style="flex-direction:row;justify-content:flex-start;gap:12px;text-align:left;padding:16px;">'
       + '<div class="hub-icon" style="flex:none;">'+iconSVG('solo',30)+'</div><div><h3 style="margin-bottom:2px;">Autonome'+badge('habitue')+'</h3><div class="hint" style="margin:0;">Pas besoin d\'explications, je connais l\'application.</div></div></div>'
       + '</div>'
       + (ids.length ? '<div class="stage-label" style="margin-top:16px;">Sujets créatifs précédents</div>'+list : '')
@@ -586,7 +586,17 @@ var SECTOR_QUESTION = {
     });
     root.querySelectorAll('[data-open]').forEach(function(b){ b.addEventListener('click', function(){ store.currentId=b.getAttribute('data-open'); persist(); }); });
     root.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ delete store.sessions[b.getAttribute('data-del')]; saveStore(); renderHome(); }); });
+    syncLevelCardHeights();
   }
+  function syncLevelCardHeights(){
+    var a = document.getElementById('level-guide');
+    var b = document.getElementById('level-habitue');
+    if(!a || !b) return;
+    a.style.height = ''; b.style.height = '';
+    var h = Math.max(a.offsetHeight, b.offsetHeight);
+    a.style.height = h+'px'; b.style.height = h+'px';
+  }
+  window.addEventListener('resize', function(){ syncLevelCardHeights(); });
 
   /* ============ ÉCRAN D'EXPLICATION DES 3 PHASES (mode Guidé uniquement) ============ */
   function viewPhasesIntro(s){
@@ -675,7 +685,7 @@ var SECTOR_QUESTION = {
   function wireHub(s){
     document.getElementById('go-ex1').addEventListener('click', function(){
       if(!s.ex1Branches.length){ s.stage='ex1-l1'; }
-      else if(!s.ex1WarmupDone){ s.stage='ex1-warmup'; }
+      else if(store.userLevel!=='habitue' && !s.ex1WarmupDone){ s.stage='ex1-warmup'; }
       else {
         var incompleteIdx = s.ex1Branches.findIndex(function(b){ return !b.leaves.length; });
         if(incompleteIdx>-1){ s.stage='ex1-l2'; s.ex1FillPos = incompleteIdx; }
@@ -695,7 +705,7 @@ var SECTOR_QUESTION = {
 
   /* ============ EX1 · a) mots en lien direct avec le sujet (tout début, structure l'exercice) ============ */
   function subjectReminderHTML(s){
-    return '<div class="hint" style="font-size:13px;margin-bottom:12px;">Sujet central : <b style="color:var(--ink);">'+esc(s.subject||'—')+'</b></div>';
+    return '<div class="hint" style="font-size:13px;margin-bottom:12px;">Sujet central : <span class="display" style="color:var(--ink);font-weight:500;">'+esc(s.subject||'—')+'</span></div>';
   }
   function encourageL1(count){
     if(count<=1) return "Bien, encore quelques mots pour structurer l'exploration.";
@@ -727,7 +737,7 @@ var SECTOR_QUESTION = {
     root.querySelectorAll('[data-rm-l1]').forEach(function(btn){ btn.addEventListener('click', function(){ s.ex1Branches.splice(parseInt(btn.getAttribute('data-rm-l1'),10),1); persist(); }); });
     var next=document.getElementById('next-l1');
     if(next) next.addEventListener('click', function(){
-      s.stage = s.ex1WarmupDone ? 'ex1-l2' : 'ex1-warmup';
+      s.stage = (store.userLevel==='habitue' || s.ex1WarmupDone) ? 'ex1-l2' : 'ex1-warmup';
       if(s.stage==='ex1-l2') s.ex1FillPos=0;
       persist();
     });
@@ -752,18 +762,18 @@ var SECTOR_QUESTION = {
     return "Parfait, tu peux passer à la suite.";
   }
   function viewEx1Warmup(s){
-    if(!s.ex1WarmupWords || s.ex1WarmupWords.length!==2){
-      s.ex1WarmupWords = shuffle(WARMUP_WORDS.slice()).slice(0,2);
+    if(!s.ex1WarmupWords || s.ex1WarmupWords.length!==1){
+      s.ex1WarmupWords = shuffle(WARMUP_WORDS.slice()).slice(0,1);
       s.ex1WarmupPos = 0;
-      s.ex1WarmupEvocations = [[],[]];
+      s.ex1WarmupEvocations = [[]];
     }
-    if(!s.ex1WarmupEvocations) s.ex1WarmupEvocations = [[],[]];
+    if(!s.ex1WarmupEvocations) s.ex1WarmupEvocations = [[]];
     var pos = s.ex1WarmupPos;
     var word = s.ex1WarmupWords[pos];
     var isLast = pos === s.ex1WarmupWords.length-1;
     var evocs = s.ex1WarmupEvocations[pos] || [];
     var chips = evocs.map(function(w,i){ return '<span class="chip">'+esc(w)+'<button type="button" data-rm-we="'+i+'" style="border:none;background:none;color:var(--ink-faint);cursor:pointer;margin-left:2px;font-size:15px;">×</button></span>'; }).join('');
-    return '<div class="stage-label">Divergence · Exercice 1 — échauffement '+(pos+1)+'/'+s.ex1WarmupWords.length+'</div>'
+    return '<div class="stage-label">Divergence · Exercice 1 — échauffement</div>'
       + '<h1 class="title"><span class="stage-icon">'+iconSVG('warmup')+'</span>Un peu d\'échauffement...</h1>'
       + '<p class="lede">pour se mettre en forme.</p>'
       + '<div class="card">'
